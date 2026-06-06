@@ -1,4 +1,5 @@
 use std::fmt::{self, Debug};
+use std::process::Command;
 use std::{env, fs, io};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
@@ -30,11 +31,13 @@ impl fmt::Debug for Repo {
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let repo_path = env::var("REPO_PATH").expect("REPO_PATH is required");
+        let editor = env::var("REPO_EDITOR").expect("REPO_EDITOR is required");
+
         self.get_repos(&repo_path);
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
+            self.handle_events(&editor)?;
         }
         Ok(())
     }
@@ -73,22 +76,22 @@ impl App {
         frame.render_stateful_widget(list, frame.area(), &mut self.list_state);
     }
 
-    fn handle_events(&mut self) -> io::Result<()> {
+    fn handle_events(&mut self, editor: &str) -> io::Result<()> {
         match event::read()? {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event)
+                self.handle_key_event(key_event, editor)
             }
             _ => {}
         };
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
+    fn handle_key_event(&mut self, key_event: KeyEvent, editor: &str) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Up => self.decrement_counter(),
             KeyCode::Down => self.increment_counter(),
-            KeyCode::Enter => self.interact(),
+            KeyCode::Enter => self.interact(editor),
             _ => {}
         }
     }
@@ -105,9 +108,13 @@ impl App {
         self.counter = (self.counter + self.items.len() - 1) % self.items.len();
     }
 
-    fn interact(&mut self) {
+    fn interact(&mut self, editor: &str) {
+        Command::new(editor)
+            .arg(&self.items[self.counter].path)
+            .output()
+            .expect("failed to execute process");
+
         self.exit();
-        dbg!(&self.items[self.counter].path);
     }
 }
 
