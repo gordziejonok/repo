@@ -1,33 +1,58 @@
-use std::io;
+use std::fmt::{self, Debug};
+use std::{env, fs, io};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::style::Modifier;
 use ratatui::widgets::{List, ListState};
 use ratatui::{
-    DefaultTerminal, Frame,
-    style::Stylize,
-    symbols::border,
-    text::Line,
-    widgets::Block,
+    DefaultTerminal, Frame, style::Stylize, symbols::border, text::Line, widgets::Block,
 };
 
 #[derive(Debug, Default)]
 pub struct App {
-    items: Vec<String>,
+    items: Vec<Repo>,
     counter: usize,
     list_state: ListState,
     exit: bool,
 }
 
+struct Repo {
+    slug: String,
+    path: std::path::PathBuf,
+}
+
+impl fmt::Debug for Repo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.slug)
+    }
+}
+
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        self.items = (1..21).map(|i| format!("repo_{i}")).collect();
+        let repo_path = env::var("REPO_PATH").expect("REPO_PATH is required");
+        self.get_repos(&repo_path);
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
         }
         Ok(())
+    }
+
+    fn get_repos(&mut self, repo_path: &str) {
+        let Ok(read_dir) = fs::read_dir(repo_path) else {
+            return;
+        };
+        let items: Vec<Repo> = read_dir
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().map(|f| f.is_dir()).unwrap_or(false))
+            .map(|e| Repo {
+                slug: e.file_name().to_string_lossy().into_owned(),
+                path: e.path(),
+            })
+            .collect();
+
+        self.items = items;
     }
 
     fn draw(&mut self, frame: &mut Frame) {
@@ -39,7 +64,7 @@ impl App {
             .title_bottom(title_bottom.right_aligned())
             .border_set(border::THICK);
 
-        let list = List::new(self.items.iter().map(|s| s.as_str()))
+        let list = List::new(self.items.iter().map(|r| r.slug.as_str()))
             .block(block)
             // .style(Color::White)
             .highlight_style(Modifier::REVERSED)
@@ -63,6 +88,7 @@ impl App {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Up => self.decrement_counter(),
             KeyCode::Down => self.increment_counter(),
+            KeyCode::Enter => self.interact(),
             _ => {}
         }
     }
@@ -77,6 +103,11 @@ impl App {
 
     fn decrement_counter(&mut self) {
         self.counter = (self.counter + self.items.len() - 1) % self.items.len();
+    }
+
+    fn interact(&mut self) {
+        self.exit();
+        dbg!(&self.items[self.counter].path);
     }
 }
 
