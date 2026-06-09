@@ -3,11 +3,16 @@ use std::process::Command;
 use std::{env, fs, io};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::Modifier;
 use ratatui::widgets::{List, ListState};
 use ratatui::{
     DefaultTerminal, Frame, style::Stylize, symbols::border, text::Line, widgets::Block,
 };
+
+use crate::help::Help;
+
+mod help;
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -60,12 +65,18 @@ impl App {
 
     fn draw(&mut self, frame: &mut Frame) {
         self.list_state.select(Some(self.counter));
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(2)])
+            .split(frame.area());
+
         let title = Line::from(" Repo ".bold());
         let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, self.items.len()));
         let block = Block::bordered()
             .title(title.left_aligned())
             .title_bottom(title_bottom.right_aligned())
-            .border_set(border::THICK);
+            .border_set(border::PLAIN);
 
         let list = List::new(self.items.iter().map(|r| r.slug.as_str()))
             .block(block)
@@ -73,7 +84,8 @@ impl App {
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ");
 
-        frame.render_stateful_widget(list, frame.area(), &mut self.list_state);
+        frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+        Help.draw(frame, chunks[1]);
     }
 
     fn handle_events(&mut self, editor: &str) -> io::Result<()> {
