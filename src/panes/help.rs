@@ -4,7 +4,7 @@ use ratatui::{Frame, layout::Rect, style::Stylize, text::Line, widgets::Paragrap
 pub struct Help;
 
 impl Help {
-    pub fn draw(&self, frame: &mut Frame, area: Rect) {
+    pub fn draw(&mut self, frame: &mut Frame, area: Rect) {
         let text = vec![
             Line::from("[↑↓ to move, enter to interact, q to quit]"),
             Line::from(""),
