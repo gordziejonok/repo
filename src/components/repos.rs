@@ -20,6 +20,7 @@ pub struct Repos {
     repo_path: String,
     editor: String,
     exit: bool,
+    find: bool,
 }
 
 pub struct Repo {
@@ -55,7 +56,16 @@ impl Component for Repos {
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ");
 
-        frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+        if self.find {
+            let body = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(1), Constraint::Length(2)])
+                .split(chunks[0]);
+
+            frame.render_stateful_widget(&list, body[0], &mut self.list_state);
+        } else {
+            frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+        }
 
         let text = vec![
             Line::from("[↑↓ to move, enter to interact, ctrl + c to quit]"),
