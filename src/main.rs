@@ -1,10 +1,12 @@
 use std::io;
 
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use ratatui::crossterm::event::{self, Event, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
 
+use crate::action::Action;
 use crate::components::Component;
 
+mod action;
 mod components;
 
 #[derive(Default)]
@@ -44,11 +46,13 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Char('q') => self.exit(),
-            _ => {
-                self.components[self.active_component].handle_key_event(key_event);
-            }
+        let action = self.components[self.active_component]
+            .handle_key_event(key_event)
+            .unwrap();
+
+        match action {
+            Some(Action::Quit) => self.exit(),
+            _ => {}
         }
     }
 

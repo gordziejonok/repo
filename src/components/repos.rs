@@ -1,4 +1,4 @@
-use std::{env, fmt, fs, process::Command};
+use std::{env, error::Error, fmt, fs, process::Command};
 
 use ratatui::{
     Frame,
@@ -10,7 +10,7 @@ use ratatui::{
     widgets::{Block, List, ListState, Paragraph},
 };
 
-use crate::components::Component;
+use crate::{action::Action, components::Component};
 
 #[derive(Default, Debug)]
 pub struct Repos {
@@ -19,6 +19,7 @@ pub struct Repos {
     list_state: ListState,
     repo_path: String,
     editor: String,
+    exit: bool,
 }
 
 pub struct Repo {
@@ -66,12 +67,19 @@ impl Component for Repos {
         frame.render_widget(paragraph, chunks[1]);
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
+    fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<Option<Action>, Box<dyn Error>> {
         match key_event.code {
+            KeyCode::Char('q') => self.exit = true,
             KeyCode::Up => self.decrement_counter(),
             KeyCode::Down => self.increment_counter(),
             KeyCode::Enter => self.interact(),
             _ => {}
+        };
+
+        if self.exit {
+            Ok(Some(Action::Quit))
+        } else {
+            Ok(None)
         }
     }
 
@@ -117,5 +125,6 @@ impl Repos {
             .arg(&self.items[self.counter].path)
             .output()
             .expect("failed to execute process");
+        self.exit = true;
     }
 }
