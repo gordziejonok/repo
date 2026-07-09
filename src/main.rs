@@ -1,24 +1,22 @@
-use std::process::Command;
-use std::{env, io};
+use std::io;
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::{DefaultTerminal, Frame};
 
-use crate::panes::Pane;
+use crate::components::Component;
 
-mod panes;
+mod components;
 
 #[derive(Default)]
 pub struct App {
-    panes: Vec<Box<dyn Pane>>,
+    panes: Vec<Box<dyn Component>>,
     active_pane: usize,
     exit: bool,
 }
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        self.panes = vec![Box::new(panes::repos::Repos::default())];
+        self.panes = vec![Box::new(components::repos::Repos::default())];
         for pane in self.panes.iter_mut() {
             pane.init()
         }
@@ -32,13 +30,7 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Length(2)])
-            .split(frame.area());
-
-        self.panes[0].draw(frame, chunks[0]);
-        panes::help::Help.draw(frame, chunks[1]);
+        self.panes[self.active_pane].draw(frame, frame.area());
     }
 
     fn handle_events(&mut self) -> io::Result<()> {

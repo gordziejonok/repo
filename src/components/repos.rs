@@ -3,14 +3,14 @@ use std::{env, fmt, fs, process::Command};
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyEvent},
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Stylize},
     symbols::border,
     text::Line,
-    widgets::{Block, List, ListState},
+    widgets::{Block, List, ListState, Paragraph},
 };
 
-use crate::panes::Pane;
+use crate::components::Component;
 
 #[derive(Default, Debug)]
 pub struct Repos {
@@ -32,8 +32,13 @@ impl fmt::Debug for Repo {
     }
 }
 
-impl Pane for Repos {
+impl Component for Repos {
     fn draw(&mut self, frame: &mut Frame, area: Rect) {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(2)])
+            .split(area);
+
         self.list_state.select(Some(self.counter));
 
         let title = Line::from(" Repo ".bold());
@@ -49,7 +54,16 @@ impl Pane for Repos {
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ");
 
-        frame.render_stateful_widget(list, area, &mut self.list_state);
+        frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+
+        let text = vec![
+            Line::from("[↑↓ to move, enter to interact, q to quit]"),
+            Line::from(""),
+        ];
+
+        let paragraph = Paragraph::new(text).dark_gray();
+
+        frame.render_widget(paragraph, chunks[1]);
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
