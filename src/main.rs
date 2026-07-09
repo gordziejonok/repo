@@ -9,18 +9,18 @@ mod components;
 
 #[derive(Default)]
 pub struct App {
-    panes: Vec<Box<dyn Component>>,
-    active_pane: usize,
+    components: Vec<Box<dyn Component>>,
+    active_component: usize,
     exit: bool,
 }
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        self.panes = vec![Box::new(components::repos::Repos::default())];
-        for pane in self.panes.iter_mut() {
-            pane.init()
+        self.components = vec![Box::new(components::repos::Repos::default())];
+        for component in self.components.iter_mut() {
+            component.init()
         }
-        self.active_pane = 0;
+        self.active_component = 0;
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -30,7 +30,7 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        self.panes[self.active_pane].draw(frame, frame.area());
+        self.components[self.active_component].draw(frame, frame.area());
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -47,7 +47,7 @@ impl App {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             _ => {
-                self.panes[self.active_pane].handle_key_event(key_event);
+                self.components[self.active_component].handle_key_event(key_event);
             }
         }
     }
