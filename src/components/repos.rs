@@ -20,7 +20,7 @@ pub struct Repos {
     repo_path: String,
     editor: String,
     exit: bool,
-    find: bool,
+    search: String,
 }
 
 pub struct Repo {
@@ -56,13 +56,19 @@ impl Component for Repos {
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ");
 
-        if self.find {
+        if !self.search.is_empty() {
             let body = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(1), Constraint::Length(2)])
+                .constraints([Constraint::Min(1), Constraint::Length(3)])
                 .split(chunks[0]);
 
+            let title = Line::from(" Search ").bold();
+            let text = Line::from(format!(" {} ", self.search));
+            let block = Block::bordered().title(title);
+            let paragraph = Paragraph::new(text).block(block);
+
             frame.render_stateful_widget(&list, body[0], &mut self.list_state);
+            frame.render_widget(paragraph, body[1]);
         } else {
             frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
         }
@@ -84,6 +90,10 @@ impl Component for Repos {
             }
         } else {
             match key_event.code {
+                KeyCode::Char(c) => self.search.push(c),
+                KeyCode::Backspace => {
+                    self.search.pop();
+                }
                 KeyCode::Up => self.decrement_counter(),
                 KeyCode::Down => self.increment_counter(),
                 KeyCode::Enter => self.interact(),
