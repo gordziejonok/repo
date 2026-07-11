@@ -84,7 +84,7 @@ impl Component for Repos {
         }
 
         let text = vec![
-            Line::from("[↑↓ to move, enter to interact, ctrl + c to quit]"),
+            Line::from("[↑↓ to move, type to filter, enter to interact, ctrl + c to quit]"),
             Line::from(""),
         ];
 
