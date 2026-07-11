@@ -50,7 +50,17 @@ impl Component for Repos {
             .title_bottom(title_bottom.right_aligned())
             .border_set(border::PLAIN);
 
-        let list = List::new(self.items.iter().map(|r| r.slug.as_str()))
+        let items = self
+            .items
+            .iter()
+            .filter(|r| {
+                r.slug
+                    .to_lowercase()
+                    .starts_with(&self.search.to_lowercase())
+            })
+            .map(|r| r.slug.as_str());
+
+        let list = List::new(items)
             .block(block)
             // .style(Color::White)
             .highlight_style(Modifier::REVERSED)
