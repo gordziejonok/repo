@@ -2,7 +2,7 @@ use std::{env, error::Error, fmt, fs, process::Command};
 
 use ratatui::{
     Frame,
-    crossterm::event::{KeyCode, KeyEvent},
+    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Stylize},
     symbols::border,
@@ -58,7 +58,7 @@ impl Component for Repos {
         frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
 
         let text = vec![
-            Line::from("[↑↓ to move, enter to interact, q to quit]"),
+            Line::from("[↑↓ to move, enter to interact, ctrl + c to quit]"),
             Line::from(""),
         ];
 
@@ -68,13 +68,18 @@ impl Component for Repos {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<Option<Action>, Box<dyn Error>> {
-        match key_event.code {
-            KeyCode::Char('q') => self.exit = true,
-            KeyCode::Up => self.decrement_counter(),
-            KeyCode::Down => self.increment_counter(),
-            KeyCode::Enter => self.interact(),
-            _ => {}
-        };
+        if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+            if let KeyCode::Char('c') = key_event.code {
+                self.exit = true
+            }
+        } else {
+            match key_event.code {
+                KeyCode::Up => self.decrement_counter(),
+                KeyCode::Down => self.increment_counter(),
+                KeyCode::Enter => self.interact(),
+                _ => {}
+            };
+        }
 
         if self.exit {
             Ok(Some(Action::Quit))
