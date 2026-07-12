@@ -43,22 +43,14 @@ impl Component for Repos {
 
         self.list_state.select(Some(self.counter));
 
+        let items = self.get_filtered_slugs();
+
         let title = Line::from(" Repo ".bold());
-        let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, self.items.len()));
+        let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, items.len()));
         let block = Block::bordered()
             .title(title.left_aligned())
             .title_bottom(title_bottom.right_aligned())
             .border_set(border::PLAIN);
-
-        let items = self
-            .items
-            .iter()
-            .filter(|r| {
-                r.slug
-                    .to_lowercase()
-                    .starts_with(&self.search.to_lowercase())
-            })
-            .map(|r| r.slug.as_str());
 
         let list = List::new(items)
             .block(block)
@@ -100,9 +92,13 @@ impl Component for Repos {
             }
         } else {
             match key_event.code {
-                KeyCode::Char(c) => self.search.push(c),
+                KeyCode::Char(c) => {
+                    self.search.push(c);
+                    self.counter = 0
+                }
                 KeyCode::Backspace => {
                     self.search.pop();
+                    self.counter = 0
                 }
                 KeyCode::Up => self.decrement_counter(),
                 KeyCode::Down => self.increment_counter(),
@@ -148,11 +144,11 @@ impl Repos {
     }
 
     fn increment_counter(&mut self) {
-        self.counter = (self.counter + 1) % self.items.len();
+        self.counter = (self.counter + 1) % self.get_filtered_slugs().len();
     }
 
     fn decrement_counter(&mut self) {
-        self.counter = (self.counter + self.items.len() - 1) % self.items.len();
+        self.counter = (self.counter + self.items.len() - 1) % self.get_filtered_slugs().len();
     }
 
     fn interact(&mut self) {
@@ -161,5 +157,14 @@ impl Repos {
             .output()
             .expect("failed to execute process");
         self.exit = true;
+    }
+
+    fn get_filtered_slugs(&self) -> Vec<String> {
+        let filter = &self.search.to_lowercase();
+        self.items
+            .iter()
+            .filter(|r| r.slug.to_lowercase().starts_with(filter))
+            .map(|r| r.slug.clone())
+            .collect()
     }
 }
