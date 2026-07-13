@@ -43,10 +43,18 @@ impl Component for Repos {
 
         self.list_state.select(Some(self.counter));
 
-        let items = self.get_filtered_slugs();
+        let items: Vec<String> = self
+            .items
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| self.get_filtered_indexes().contains(i))
+            .map(|(_, r)| r.slug.to_string())
+            .collect();
 
         let title = Line::from(" Repo ".bold());
-        let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, items.len()));
+        let len = items.len();
+        let display_counter = if len > 0 { self.counter + 1 } else { 0 };
+        let title_bottom = Line::from(format!(" {} of {} ", display_counter, items.len()));
         let block = Block::bordered()
             .title(title.left_aligned())
             .title_bottom(title_bottom.right_aligned())
@@ -144,27 +152,41 @@ impl Repos {
     }
 
     fn increment_counter(&mut self) {
-        self.counter = (self.counter + 1) % self.get_filtered_slugs().len();
+        let len = self.get_filtered_indexes().len();
+
+        if len > 0 {
+            self.counter = (self.counter + 1) % len;
+        }
     }
 
     fn decrement_counter(&mut self) {
-        self.counter = (self.counter + self.items.len() - 1) % self.get_filtered_slugs().len();
+        let len = self.get_filtered_indexes().len();
+
+        if len > 0 {
+            self.counter = (self.counter + len - 1) % len;
+        }
     }
 
     fn interact(&mut self) {
+        if self.get_filtered_indexes().len() == 0 {
+            return;
+        };
+        let repo = &self.items[self.get_filtered_indexes()[self.counter]];
         Command::new(&self.editor)
-            .arg(&self.items[self.counter].path)
+            .arg(&repo.path)
             .output()
             .expect("failed to execute process");
         self.exit = true;
     }
 
-    fn get_filtered_slugs(&self) -> Vec<String> {
-        let filter = &self.search.to_lowercase();
+    fn get_filtered_indexes(&self) -> Vec<usize> {
+        let filter = self.search.to_lowercase();
+
         self.items
             .iter()
-            .filter(|r| r.slug.to_lowercase().starts_with(filter))
-            .map(|r| r.slug.clone())
+            .enumerate()
+            .filter(|(_, r)| r.slug.to_lowercase().starts_with(&filter))
+            .map(|(i, _)| i)
             .collect()
     }
 }
