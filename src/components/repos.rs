@@ -52,7 +52,9 @@ impl Component for Repos {
             .collect();
 
         let title = Line::from(" Repo ".bold());
-        let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, items.len()));
+        let len = items.len();
+        let display_counter = if len > 0 { self.counter + 1 } else { 0 };
+        let title_bottom = Line::from(format!(" {} of {} ", display_counter, items.len()));
         let block = Block::bordered()
             .title(title.left_aligned())
             .title_bottom(title_bottom.right_aligned())
@@ -150,11 +152,19 @@ impl Repos {
     }
 
     fn increment_counter(&mut self) {
-        self.counter = (self.counter + 1) % self.get_filtered_indexes().len();
+        let len = self.get_filtered_indexes().len();
+
+        if len > 0 {
+            self.counter = (self.counter + 1) % len;
+        }
     }
 
     fn decrement_counter(&mut self) {
-        self.counter = (self.counter + self.items.len() - 1) % self.get_filtered_indexes().len();
+        let len = self.get_filtered_indexes().len();
+
+        if len > 0 {
+            self.counter = (self.counter + len - 1) % len;
+        }
     }
 
     fn interact(&mut self) {
