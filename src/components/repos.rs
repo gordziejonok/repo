@@ -168,6 +168,9 @@ impl Repos {
     }
 
     fn interact(&mut self) {
+        if self.get_filtered_indexes().len() == 0 {
+            return;
+        };
         let repo = &self.items[self.get_filtered_indexes()[self.counter]];
         Command::new(&self.editor)
             .arg(&repo.path)
