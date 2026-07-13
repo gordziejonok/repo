@@ -20,6 +20,7 @@ pub struct Repos {
     repo_path: String,
     editor: String,
     exit: bool,
+    search: String,
 }
 
 pub struct Repo {
@@ -42,23 +43,40 @@ impl Component for Repos {
 
         self.list_state.select(Some(self.counter));
 
+        let items = self.get_filtered_slugs();
+
         let title = Line::from(" Repo ".bold());
-        let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, self.items.len()));
+        let title_bottom = Line::from(format!(" {} of {} ", self.counter + 1, items.len()));
         let block = Block::bordered()
             .title(title.left_aligned())
             .title_bottom(title_bottom.right_aligned())
             .border_set(border::PLAIN);
 
-        let list = List::new(self.items.iter().map(|r| r.slug.as_str()))
+        let list = List::new(items)
             .block(block)
             // .style(Color::White)
             .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ");
 
-        frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+        if !self.search.is_empty() {
+            let body = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(1), Constraint::Length(3)])
+                .split(chunks[0]);
+
+            let title = Line::from(" Search ").bold();
+            let text = Line::from(format!(" {} ", self.search));
+            let block = Block::bordered().title(title);
+            let paragraph = Paragraph::new(text).block(block);
+
+            frame.render_stateful_widget(&list, body[0], &mut self.list_state);
+            frame.render_widget(paragraph, body[1]);
+        } else {
+            frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+        }
 
         let text = vec![
-            Line::from("[↑↓ to move, enter to interact, ctrl + c to quit]"),
+            Line::from("[↑↓ to move, type to filter, enter to interact, ctrl + c to quit]"),
             Line::from(""),
         ];
 
@@ -74,6 +92,14 @@ impl Component for Repos {
             }
         } else {
             match key_event.code {
+                KeyCode::Char(c) => {
+                    self.search.push(c);
+                    self.counter = 0
+                }
+                KeyCode::Backspace => {
+                    self.search.pop();
+                    self.counter = 0
+                }
                 KeyCode::Up => self.decrement_counter(),
                 KeyCode::Down => self.increment_counter(),
                 KeyCode::Enter => self.interact(),
@@ -118,11 +144,11 @@ impl Repos {
     }
 
     fn increment_counter(&mut self) {
-        self.counter = (self.counter + 1) % self.items.len();
+        self.counter = (self.counter + 1) % self.get_filtered_slugs().len();
     }
 
     fn decrement_counter(&mut self) {
-        self.counter = (self.counter + self.items.len() - 1) % self.items.len();
+        self.counter = (self.counter + self.items.len() - 1) % self.get_filtered_slugs().len();
     }
 
     fn interact(&mut self) {
@@ -131,5 +157,14 @@ impl Repos {
             .output()
             .expect("failed to execute process");
         self.exit = true;
+    }
+
+    fn get_filtered_slugs(&self) -> Vec<String> {
+        let filter = &self.search.to_lowercase();
+        self.items
+            .iter()
+            .filter(|r| r.slug.to_lowercase().starts_with(filter))
+            .map(|r| r.slug.clone())
+            .collect()
     }
 }
