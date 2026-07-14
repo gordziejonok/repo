@@ -1,4 +1,4 @@
-use std::io;
+use std::{env, io};
 
 use ratatui::crossterm::event::{self, Event, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
@@ -13,14 +13,26 @@ mod components;
 pub struct App {
     components: Vec<Box<dyn Component>>,
     active_component: usize,
+    config: Config,
     exit: bool,
+}
+
+#[derive(Default, Clone)]
+pub struct Config {
+    repo_path: String,
+    editor: String,
 }
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        let repo_path = env::var("REPO_PATH").expect("REPO_PATH is required");
+        let editor = env::var("REPO_EDITOR").expect("REPO_EDITOR is required");
+        self.config = Config { repo_path, editor };
+
         self.components = vec![Box::new(components::repos::Repos::default())];
         for component in self.components.iter_mut() {
-            component.init()
+            component.set_config(self.config.clone());
+            component.init();
         }
         self.active_component = 0;
 
