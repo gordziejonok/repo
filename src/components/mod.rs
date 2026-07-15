@@ -5,6 +5,7 @@ use ratatui::{Frame, crossterm::event::KeyEvent, layout::Rect};
 use crate::{Config, action::Action};
 
 pub mod repos;
+pub mod settings;
 
 pub trait Component {
     fn draw(&mut self, frame: &mut Frame, area: Rect);

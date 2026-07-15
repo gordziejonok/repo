@@ -18,8 +18,8 @@ pub struct Repos {
     pub counter: usize,
     list_state: ListState,
     config: Config,
-    exit: bool,
     search: String,
+    exit: bool,
 }
 
 pub struct Repo {

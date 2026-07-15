@@ -5,7 +5,9 @@ edition = "2024"
 
 [dependencies]
 color-eyre = "0.6.5"
+confy = "2.0.0"
 ratatui = "0.30.1"
+serde = { version = "1.0.228", features = ["derive"] }
 
 [profile.release]
 codegen-units = 1

@@ -2,6 +2,7 @@ use std::{env, io};
 
 use ratatui::crossterm::event::{self, Event, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
+use serde::{Deserialize, Serialize};
 
 use crate::action::Action;
 use crate::components::Component;
@@ -17,7 +18,7 @@ pub struct App {
     exit: bool,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct Config {
     repo_path: String,
     editor: String,
@@ -25,16 +26,21 @@ pub struct Config {
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        let repo_path = env::var("REPO_PATH").expect("REPO_PATH is required");
-        let editor = env::var("REPO_EDITOR").expect("REPO_EDITOR is required");
-        self.config = Config { repo_path, editor };
+        self.update_config();
 
-        self.components = vec![Box::new(components::repos::Repos::default())];
+        self.components = vec![
+            Box::new(components::repos::Repos::default()),
+            Box::new(components::settings::Settings::default()),
+        ];
+
         for component in self.components.iter_mut() {
-            component.set_config(self.config.clone());
             component.init();
         }
         self.active_component = 0;
+
+        if self.config.editor.is_empty() && self.config.repo_path.is_empty() {
+            self.active_component = 1;
+        }
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -65,6 +71,14 @@ impl App {
         match action {
             Some(Action::Quit) => self.exit(),
             _ => {}
+        }
+    }
+
+    fn update_config(&mut self) {
+        self.config = confy::load("repo", None).expect("Config file not found");
+
+        for component in self.components.iter_mut() {
+            component.set_config(self.config.clone());
         }
     }
 
