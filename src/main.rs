@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::io;
 
 use ratatui::crossterm::event::{self, Event, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
@@ -26,16 +26,13 @@ pub struct Config {
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        self.update_config();
-
         self.components = vec![
             Box::new(components::repos::Repos::default()),
             Box::new(components::settings::Settings::default()),
         ];
 
-        for component in self.components.iter_mut() {
-            component.init();
-        }
+        self.update_config();
+
         self.active_component = 0;
 
         if self.config.editor.is_empty() && self.config.repo_path.is_empty() {
@@ -70,6 +67,7 @@ impl App {
 
         match action {
             Some(Action::Quit) => self.exit(),
+            Some(Action::UpdateConfig) => self.update_config(),
             _ => {}
         }
     }
@@ -79,6 +77,11 @@ impl App {
 
         for component in self.components.iter_mut() {
             component.set_config(self.config.clone());
+            component.init();
+        }
+
+        if self.active_component == 1 {
+            self.active_component = 0;
         }
     }
 
