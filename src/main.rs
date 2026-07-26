@@ -2,6 +2,7 @@ use std::io;
 
 use ratatui::crossterm::event::{self, Event, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
+use serde::{Deserialize, Serialize};
 
 use crate::action::Action;
 use crate::components::Component;
@@ -13,16 +14,30 @@ mod components;
 pub struct App {
     components: Vec<Box<dyn Component>>,
     active_component: usize,
+    config: Config,
     exit: bool,
+}
+
+#[derive(Default, Clone, Serialize, Deserialize)]
+pub struct Config {
+    repo_path: String,
+    editor: String,
 }
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        self.components = vec![Box::new(components::repos::Repos::default())];
-        for component in self.components.iter_mut() {
-            component.init()
-        }
+        self.components = vec![
+            Box::new(components::repos::Repos::default()),
+            Box::new(components::settings::Settings::default()),
+        ];
+
+        self.update_config();
+
         self.active_component = 0;
+
+        if self.config.editor.is_empty() && self.config.repo_path.is_empty() {
+            self.active_component = 1;
+        }
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -52,12 +67,31 @@ impl App {
 
         match action {
             Some(Action::Quit) => self.exit(),
+            Some(Action::UpdateConfig) => self.update_config(),
+            Some(Action::Settings) => self.open_settings(),
             _ => {}
+        }
+    }
+
+    fn update_config(&mut self) {
+        self.config = confy::load("repo", None).expect("Config file not found");
+
+        for component in self.components.iter_mut() {
+            component.set_config(self.config.clone());
+            component.init();
+        }
+
+        if self.active_component == 1 {
+            self.active_component = 0;
         }
     }
 
     fn exit(&mut self) {
         self.exit = true;
+    }
+
+    fn open_settings(&mut self) {
+        self.active_component = 1;
     }
 }
 

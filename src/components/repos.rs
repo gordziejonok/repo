@@ -1,4 +1,4 @@
-use std::{env, error::Error, fmt, fs, process::Command};
+use std::{error::Error, fmt, fs, process::Command};
 
 use ratatui::{
     Frame,
@@ -10,17 +10,16 @@ use ratatui::{
     widgets::{Block, List, ListState, Paragraph},
 };
 
-use crate::{action::Action, components::Component};
+use crate::{Config, action::Action, components::Component};
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Repos {
     pub items: Vec<Repo>,
     pub counter: usize,
     list_state: ListState,
-    repo_path: String,
-    editor: String,
-    exit: bool,
+    config: Config,
     search: String,
+    exit: bool,
 }
 
 pub struct Repo {
@@ -111,6 +110,9 @@ impl Component for Repos {
                 KeyCode::Up => self.decrement_counter(),
                 KeyCode::Down => self.increment_counter(),
                 KeyCode::Enter => self.interact(),
+                KeyCode::Esc => {
+                    return Ok(Some(Action::Settings));
+                }
                 _ => {}
             };
         }
@@ -123,10 +125,11 @@ impl Component for Repos {
     }
 
     fn init(&mut self) {
-        self.repo_path = env::var("REPO_PATH").expect("REPO_PATH is required");
-        self.editor = env::var("REPO_EDITOR").expect("REPO_EDITOR is required");
-
         self.focus();
+    }
+
+    fn set_config(&mut self, config: crate::Config) {
+        self.config = config;
     }
 }
 
@@ -136,7 +139,7 @@ impl Repos {
     }
 
     fn get_repos(&mut self) {
-        let Ok(read_dir) = fs::read_dir(self.repo_path.clone()) else {
+        let Ok(read_dir) = fs::read_dir(self.config.repo_path.clone()) else {
             return;
         };
         let items: Vec<Repo> = read_dir
@@ -172,7 +175,7 @@ impl Repos {
             return;
         };
         let repo = &self.items[self.get_filtered_indexes()[self.counter]];
-        Command::new(&self.editor)
+        Command::new(&self.config.editor)
             .arg(&repo.path)
             .output()
             .expect("failed to execute process");
