@@ -68,6 +68,7 @@ impl App {
         match action {
             Some(Action::Quit) => self.exit(),
             Some(Action::UpdateConfig) => self.update_config(),
+            Some(Action::Settings) => self.open_settings(),
             _ => {}
         }
     }
@@ -87,6 +88,10 @@ impl App {
 
     fn exit(&mut self) {
         self.exit = true;
+    }
+
+    fn open_settings(&mut self) {
+        self.active_component = 1;
     }
 }
 

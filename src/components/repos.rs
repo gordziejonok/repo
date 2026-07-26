@@ -110,6 +110,9 @@ impl Component for Repos {
                 KeyCode::Up => self.decrement_counter(),
                 KeyCode::Down => self.increment_counter(),
                 KeyCode::Enter => self.interact(),
+                KeyCode::Esc => {
+                    return Ok(Some(Action::Settings));
+                }
                 _ => {}
             };
         }

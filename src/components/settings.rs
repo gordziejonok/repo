@@ -1,6 +1,6 @@
 use ratatui::{
     Frame,
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::{KeyCode, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::Line,
@@ -24,12 +24,7 @@ impl Component for Settings {
             .split(area);
 
         let title = Line::from(" Settings ").bold();
-        // let path = confy::get_configuration_file_path("repo", None).expect("Config file not found");
-        // let text = Line::from(format!(" {:?} ", path));
         let block = Block::bordered().title(title);
-        // let paragraph = Paragraph::new(text).block(block);
-
-        // frame.render_widget(paragraph, area);
 
         let path = confy::get_configuration_file_path("repo", None)
             .unwrap()
@@ -80,8 +75,28 @@ impl Component for Settings {
                 KeyCode::Up => self.table_state.select_previous(),
                 KeyCode::Right => self.table_state.select_next_column(),
                 KeyCode::Left => self.table_state.select_previous_column(),
-                KeyCode::Char(c) => (),
-                KeyCode::Backspace => (),
+                KeyCode::Char(c) => {
+                    let index = self
+                        .table_state
+                        .selected()
+                        .expect("A row should always be selected");
+                    if index == 0 {
+                        self.config.repo_path.push(c);
+                    } else if index == 1 {
+                        self.config.editor.push(c);
+                    }
+                }
+                KeyCode::Backspace => {
+                    let index = self
+                        .table_state
+                        .selected()
+                        .expect("A row should always be selected");
+                    if index == 0 {
+                        self.config.repo_path.pop();
+                    } else if index == 1 {
+                        self.config.editor.pop();
+                    }
+                }
                 KeyCode::Esc => {
                     confy::store("repo", None, self.config.clone()).unwrap();
                     return Ok(Some(Action::UpdateConfig));
