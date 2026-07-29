@@ -37,7 +37,7 @@ impl Component for Settings {
         ];
 
         let footer = Row::new(["Path", &path]);
-        let widths = [Constraint::Length(50), Constraint::Fill(1)];
+        let widths = [Constraint::Percentage(50), Constraint::Fill(1)];
         let table = Table::new(rows, widths)
             .footer(footer)
             .column_spacing(1)
