@@ -12,6 +12,7 @@ use crate::{Config, action::Action, components::Component};
 #[derive(Default)]
 pub struct Settings {
     config: Config,
+    new_config: Config,
     table_state: TableState,
     exit: bool,
 }
@@ -31,9 +32,21 @@ impl Component for Settings {
             .display()
             .to_string();
 
+        let repo_label = if self.config.repo_path != self.new_config.repo_path {
+            "Repos path *"
+        } else {
+            "Repos path"
+        };
+
+        let editor_label = if self.config.editor != self.new_config.editor {
+            "Editor *"
+        } else {
+            "Editor"
+        };
+
         let rows = [
-            Row::new(["Repos path", &self.config.repo_path]),
-            Row::new(["Editor", &self.config.editor]),
+            Row::new([repo_label, &self.new_config.repo_path]),
+            Row::new([editor_label, &self.new_config.editor]),
         ];
 
         let footer = Row::new(["Path", &path]);
@@ -58,7 +71,8 @@ impl Component for Settings {
     }
 
     fn set_config(&mut self, config: Config) {
-        self.config = config;
+        self.config = config.clone();
+        self.new_config = config;
     }
 
     fn handle_key_event(
@@ -81,9 +95,9 @@ impl Component for Settings {
                         .selected()
                         .expect("A row should always be selected");
                     if index == 0 {
-                        self.config.repo_path.push(c);
+                        self.new_config.repo_path.push(c);
                     } else if index == 1 {
-                        self.config.editor.push(c);
+                        self.new_config.editor.push(c);
                     }
                 }
                 KeyCode::Backspace => {
@@ -92,13 +106,13 @@ impl Component for Settings {
                         .selected()
                         .expect("A row should always be selected");
                     if index == 0 {
-                        self.config.repo_path.pop();
+                        self.new_config.repo_path.pop();
                     } else if index == 1 {
-                        self.config.editor.pop();
+                        self.new_config.editor.pop();
                     }
                 }
                 KeyCode::Esc => {
-                    confy::store("repo", None, self.config.clone()).unwrap();
+                    confy::store("repo", None, self.new_config.clone()).unwrap();
                     return Ok(Some(Action::UpdateConfig));
                 }
                 _ => {}
