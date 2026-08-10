@@ -1,5 +1,7 @@
 # repo
 
+[![codecov](https://codecov.io/gh/gordziejonok/repo/graph/badge.svg?token=FQ41JC05YT)](https://codecov.io/gh/gordziejonok/repo)
+
 ## Installation
 
 1. Clone the repo.
