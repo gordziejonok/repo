@@ -18,7 +18,7 @@ pub struct App {
     exit: bool,
 }
 
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     repo_path: String,
     editor: String,

@@ -132,3 +132,22 @@ impl Component for Settings {
         self.table_state.select_first_column();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_config() {
+        let mut settings = Settings::default();
+        let config = Config {
+            repo_path: "abc/abc".to_string(),
+            editor: "def/def".to_string(),
+        };
+
+        settings.set_config(config.clone());
+
+        assert_eq!(settings.config, config);
+        assert_eq!(settings.new_config, config);
+    }
+}
