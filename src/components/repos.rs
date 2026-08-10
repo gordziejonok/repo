@@ -188,7 +188,7 @@ impl Repos {
         self.items
             .iter()
             .enumerate()
-            .filter(|(_, r)| r.slug.to_lowercase().starts_with(&filter))
+            .filter(|(_, r)| r.slug.to_lowercase().contains(&filter))
             .map(|(i, _)| i)
             .collect()
     }
