@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, fs, process::Command};
+use std::{error::Error, fmt, fs, path::PathBuf, process::Command};
 
 use ratatui::{
     Frame,
@@ -24,7 +24,7 @@ pub struct Repos {
 
 pub struct Repo {
     slug: String,
-    pub path: std::path::PathBuf,
+    pub path: PathBuf,
 }
 
 impl fmt::Debug for Repo {
@@ -191,5 +191,47 @@ impl Repos {
             .filter(|(_, r)| r.slug.to_lowercase().contains(&filter))
             .map(|(i, _)| i)
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_config() {
+        let mut repos = Repos::default();
+        let config = Config {
+            repo_path: "abc/abc".to_string(),
+            editor: "def/def".to_string(),
+        };
+
+        repos.set_config(config.clone());
+
+        assert_eq!(repos.config, config);
+    }
+
+    #[test]
+    fn test_get_filtered_indexes() {
+        let mut repos = Repos::default();
+        repos.items = vec![
+            Repo {
+                slug: "repository".to_string(),
+                path: PathBuf::default(),
+            },
+            Repo {
+                slug: "test".to_string(),
+                path: PathBuf::default(),
+            },
+            Repo {
+                slug: "sample_repo".to_string(),
+                path: PathBuf::default(),
+            },
+        ];
+        repos.search = "repo".to_string();
+
+        let indexes = repos.get_filtered_indexes();
+
+        assert_eq!(indexes, vec![0, 2])
     }
 }
