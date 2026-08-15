@@ -3,7 +3,7 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Clear, Paragraph, Row, Table, TableState},
 };
 
@@ -15,6 +15,7 @@ pub struct Settings {
     new_config: Config,
     table_state: TableState,
     confirmation: bool,
+    discard: bool,
     exit: bool,
 }
 
@@ -65,11 +66,29 @@ impl Component for Settings {
         frame.render_stateful_widget(table, chunks[0], &mut self.table_state);
 
         if self.confirmation {
-            let popup_block = Block::bordered().title("Popup");
-            let centered_area =
-                area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
+            let popup_block = Block::bordered();
+
+            let discard = Span::from("Discard");
+            let save = Span::from("Save");
+            let buttons = if self.discard {
+                vec![discard.underlined(), Span::from("       "), save]
+            } else {
+                vec![discard, Span::from("       "), save.underlined()]
+            };
+
+            let lines = vec![
+                Line::from("You have unsaved changes. Do you want to discard or save them?"),
+                Line::default(),
+                Line::from(buttons),
+            ];
+
+            let centered_area = area.centered(
+                Constraint::Percentage(30),
+                Constraint::Length(lines.len() as u16 + 2),
+            );
             frame.render_widget(Clear, centered_area);
-            let paragraph = Paragraph::new("Lorem ipsum").block(popup_block);
+
+            let paragraph = Paragraph::new(lines).block(popup_block).centered();
             frame.render_widget(paragraph, centered_area);
         }
 
@@ -95,30 +114,54 @@ impl Component for Settings {
             }
         } else {
             match key_event.code {
-                KeyCode::Down => self.table_state.select_next(),
-                KeyCode::Up => self.table_state.select_previous(),
-                KeyCode::Right => self.table_state.select_next_column(),
-                KeyCode::Left => self.table_state.select_previous_column(),
+                KeyCode::Down => {
+                    if !self.confirmation {
+                        self.table_state.select_next()
+                    }
+                }
+                KeyCode::Up => {
+                    if !self.confirmation {
+                        self.table_state.select_previous()
+                    }
+                }
+                KeyCode::Right => {
+                    if self.confirmation {
+                        self.discard = !self.discard;
+                    } else {
+                        self.table_state.select_next_column();
+                    }
+                }
+                KeyCode::Left => {
+                    if self.confirmation {
+                        self.discard = !self.discard;
+                    } else {
+                        self.table_state.select_previous_column();
+                    }
+                }
                 KeyCode::Char(c) => {
-                    let index = self
-                        .table_state
-                        .selected()
-                        .expect("A row should always be selected");
-                    if index == 0 {
-                        self.new_config.repo_path.push(c);
-                    } else if index == 1 {
-                        self.new_config.editor.push(c);
+                    if !self.confirmation {
+                        let index = self
+                            .table_state
+                            .selected()
+                            .expect("A row should always be selected");
+                        if index == 0 {
+                            self.new_config.repo_path.push(c);
+                        } else if index == 1 {
+                            self.new_config.editor.push(c);
+                        }
                     }
                 }
                 KeyCode::Backspace => {
-                    let index = self
-                        .table_state
-                        .selected()
-                        .expect("A row should always be selected");
-                    if index == 0 {
-                        self.new_config.repo_path.pop();
-                    } else if index == 1 {
-                        self.new_config.editor.pop();
+                    if !self.confirmation {
+                        let index = self
+                            .table_state
+                            .selected()
+                            .expect("A row should always be selected");
+                        if index == 0 {
+                            self.new_config.repo_path.pop();
+                        } else if index == 1 {
+                            self.new_config.editor.pop();
+                        }
                     }
                 }
                 KeyCode::Esc => {
@@ -129,7 +172,15 @@ impl Component for Settings {
                     } else {
                         return Ok(Some(Action::UpdateConfig));
                     }
-                    // confy::store("repo", None, self.new_config.clone()).unwrap();
+                }
+                KeyCode::Enter => {
+                    if self.confirmation {
+                        if !self.discard {
+                            confy::store("repo", None, self.new_config.clone()).unwrap();
+                        }
+                        self.confirmation = false;
+                        return Ok(Some(Action::UpdateConfig));
+                    }
                 }
                 _ => {}
             };
