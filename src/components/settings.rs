@@ -3,8 +3,8 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
-    text::Line,
-    widgets::{Block, Paragraph, Row, Table, TableState},
+    text::{Line, Span},
+    widgets::{Block, Clear, Paragraph, Row, Table, TableState},
 };
 
 use crate::{Config, action::Action, components::Component};
@@ -14,6 +14,8 @@ pub struct Settings {
     config: Config,
     new_config: Config,
     table_state: TableState,
+    confirmation: bool,
+    discard: bool,
     exit: bool,
 }
 
@@ -63,6 +65,33 @@ impl Component for Settings {
 
         frame.render_stateful_widget(table, chunks[0], &mut self.table_state);
 
+        if self.confirmation {
+            let popup_block = Block::bordered();
+
+            let discard = Span::from("Discard");
+            let save = Span::from("Save");
+            let buttons = if self.discard {
+                vec![discard.underlined(), Span::from("       "), save]
+            } else {
+                vec![discard, Span::from("       "), save.underlined()]
+            };
+
+            let lines = vec![
+                Line::from("You have unsaved changes. Do you want to discard or save them?"),
+                Line::default(),
+                Line::from(buttons),
+            ];
+
+            let centered_area = area.centered(
+                Constraint::Percentage(30),
+                Constraint::Length(lines.len() as u16 + 2),
+            );
+            frame.render_widget(Clear, centered_area);
+
+            let paragraph = Paragraph::new(lines).block(popup_block).centered();
+            frame.render_widget(paragraph, centered_area);
+        }
+
         let text = vec![Line::from("[↑↓ to move, ctrl + c to quit]"), Line::from("")];
 
         let paragraph = Paragraph::new(text).dark_gray();
@@ -85,35 +114,73 @@ impl Component for Settings {
             }
         } else {
             match key_event.code {
-                KeyCode::Down => self.table_state.select_next(),
-                KeyCode::Up => self.table_state.select_previous(),
-                KeyCode::Right => self.table_state.select_next_column(),
-                KeyCode::Left => self.table_state.select_previous_column(),
+                KeyCode::Down => {
+                    if !self.confirmation {
+                        self.table_state.select_next()
+                    }
+                }
+                KeyCode::Up => {
+                    if !self.confirmation {
+                        self.table_state.select_previous()
+                    }
+                }
+                KeyCode::Right => {
+                    if self.confirmation {
+                        self.discard = !self.discard;
+                    } else {
+                        self.table_state.select_next_column();
+                    }
+                }
+                KeyCode::Left => {
+                    if self.confirmation {
+                        self.discard = !self.discard;
+                    } else {
+                        self.table_state.select_previous_column();
+                    }
+                }
                 KeyCode::Char(c) => {
-                    let index = self
-                        .table_state
-                        .selected()
-                        .expect("A row should always be selected");
-                    if index == 0 {
-                        self.new_config.repo_path.push(c);
-                    } else if index == 1 {
-                        self.new_config.editor.push(c);
+                    if !self.confirmation {
+                        let index = self
+                            .table_state
+                            .selected()
+                            .expect("A row should always be selected");
+                        if index == 0 {
+                            self.new_config.repo_path.push(c);
+                        } else if index == 1 {
+                            self.new_config.editor.push(c);
+                        }
                     }
                 }
                 KeyCode::Backspace => {
-                    let index = self
-                        .table_state
-                        .selected()
-                        .expect("A row should always be selected");
-                    if index == 0 {
-                        self.new_config.repo_path.pop();
-                    } else if index == 1 {
-                        self.new_config.editor.pop();
+                    if !self.confirmation {
+                        let index = self
+                            .table_state
+                            .selected()
+                            .expect("A row should always be selected");
+                        if index == 0 {
+                            self.new_config.repo_path.pop();
+                        } else if index == 1 {
+                            self.new_config.editor.pop();
+                        }
                     }
                 }
                 KeyCode::Esc => {
-                    confy::store("repo", None, self.new_config.clone()).unwrap();
-                    return Ok(Some(Action::UpdateConfig));
+                    if self.edited() && !self.confirmation {
+                        self.confirmation = true;
+                    } else if self.confirmation {
+                        self.confirmation = false;
+                    } else {
+                        return Ok(Some(Action::UpdateConfig));
+                    }
+                }
+                KeyCode::Enter => {
+                    if self.confirmation {
+                        if !self.discard {
+                            confy::store("repo", None, self.new_config.clone()).unwrap();
+                        }
+                        self.confirmation = false;
+                        return Ok(Some(Action::UpdateConfig));
+                    }
                 }
                 _ => {}
             };
@@ -130,6 +197,12 @@ impl Component for Settings {
         self.table_state = TableState::default();
         self.table_state.select_first();
         self.table_state.select_first_column();
+    }
+}
+
+impl Settings {
+    fn edited(&mut self) -> bool {
+        self.config != self.new_config
     }
 }
 
