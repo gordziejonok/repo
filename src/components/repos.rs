@@ -22,6 +22,7 @@ pub struct Repos {
     exit: bool,
 }
 
+#[derive(Default)]
 pub struct Repo {
     slug: String,
     pub path: PathBuf,
@@ -198,6 +199,23 @@ impl Repos {
 mod tests {
     use super::*;
 
+    fn get_repos() -> Vec<Repo> {
+        vec![
+            Repo {
+                slug: "repository".to_string(),
+                path: PathBuf::default(),
+            },
+            Repo {
+                slug: "test".to_string(),
+                path: PathBuf::default(),
+            },
+            Repo {
+                slug: "sample_repo".to_string(),
+                path: PathBuf::default(),
+            },
+        ]
+    }
+
     #[test]
     fn test_set_config() {
         let mut repos = Repos::default();
@@ -214,24 +232,38 @@ mod tests {
     #[test]
     fn test_get_filtered_indexes() {
         let mut repos = Repos::default();
-        repos.items = vec![
-            Repo {
-                slug: "repository".to_string(),
-                path: PathBuf::default(),
-            },
-            Repo {
-                slug: "test".to_string(),
-                path: PathBuf::default(),
-            },
-            Repo {
-                slug: "sample_repo".to_string(),
-                path: PathBuf::default(),
-            },
-        ];
+        repos.items = get_repos();
         repos.search = "repo".to_string();
 
         let indexes = repos.get_filtered_indexes();
 
         assert_eq!(indexes, vec![0, 2])
+    }
+
+    #[test]
+    fn test_button_down() {
+        let mut repos = Repos::default();
+        repos.items = get_repos();
+
+        let _ = repos.handle_key_event(KeyCode::Down.into());
+        assert_eq!(repos.counter, 1)
+    }
+
+    #[test]
+    fn test_button_up() {
+        let mut repos = Repos::default();
+        repos.items = get_repos();
+
+        let _ = repos.handle_key_event(KeyCode::Up.into());
+        assert_eq!(repos.counter, 2)
+    }
+
+    #[test]
+    fn test_esc() {
+        let mut repos = Repos::default();
+
+        let result = repos.handle_key_event(KeyCode::Esc.into()).unwrap();
+
+        assert_eq!(result, Some(Action::Settings));
     }
 }
