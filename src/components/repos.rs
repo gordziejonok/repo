@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, fs, path::PathBuf, process::Command};
+use std::{error::Error, fs, path::PathBuf, process::Command};
 
 use ratatui::{
     Frame,
@@ -26,12 +26,6 @@ pub struct Repos {
 pub struct Repo {
     slug: String,
     pub path: PathBuf,
-}
-
-impl fmt::Debug for Repo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.slug)
-    }
 }
 
 impl Component for Repos {
@@ -230,14 +224,30 @@ mod tests {
     }
 
     #[test]
-    fn test_get_filtered_indexes() {
+    fn test_filtering() {
         let mut repos = Repos::default();
         repos.items = get_repos();
-        repos.search = "repo".to_string();
+        let filter = "repo".chars();
+
+        for char in filter {
+            let _ = repos.handle_key_event(KeyCode::Char(char).into());
+        }
 
         let indexes = repos.get_filtered_indexes();
 
         assert_eq!(indexes, vec![0, 2])
+    }
+
+    #[test]
+    fn test_filter_deletion() {
+        let mut repos = Repos::default();
+        repos.search = "repo".to_string();
+
+        for _ in 0..3 {
+            let _ = repos.handle_key_event(KeyCode::Backspace.into());
+        }
+
+        assert_eq!(repos.search, "r".to_string())
     }
 
     #[test]
@@ -265,5 +275,25 @@ mod tests {
         let result = repos.handle_key_event(KeyCode::Esc.into()).unwrap();
 
         assert_eq!(result, Some(Action::Settings));
+    }
+
+    #[test]
+    fn test_enter_no_repos() {
+        let mut repos = Repos::default();
+
+        let _ = repos.handle_key_event(KeyCode::Enter.into());
+
+        assert_eq!(repos.exit, false);
+    }
+
+    #[test]
+    fn test_ctrl_c() {
+        let mut repos = Repos::default();
+
+        let event = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+
+        let _ = repos.handle_key_event(event);
+
+        assert_eq!(repos.exit, true);
     }
 }
