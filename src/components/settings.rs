@@ -223,4 +223,37 @@ mod tests {
         assert_eq!(settings.config, config);
         assert_eq!(settings.new_config, config);
     }
+
+    #[test]
+    fn test_edited() {
+        let mut settings = Settings::default();
+        let config = Config {
+            repo_path: "abc/abc".to_string(),
+            editor: "def/def".to_string(),
+        };
+
+        let new_config = Config {
+            repo_path: "abc/abc".to_string(),
+            editor: "def/def".to_string(),
+        };
+
+        settings.config = config.clone();
+        settings.new_config = new_config;
+
+        assert_eq!(settings.edited(), false);
+    }
+
+    #[test]
+    fn test_not_edited() {
+        let mut settings = Settings::default();
+        let config = Config {
+            repo_path: "abc/abc".to_string(),
+            editor: "def/def".to_string(),
+        };
+
+        settings.config = config.clone();
+        settings.new_config = config;
+
+        assert_eq!(settings.edited(), false);
+    }
 }
