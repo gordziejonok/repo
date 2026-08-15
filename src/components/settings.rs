@@ -208,6 +208,8 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
+    use ratatui::crossterm::event::KeyEvent;
+
     use super::*;
 
     #[test]
@@ -225,25 +227,6 @@ mod tests {
     }
 
     #[test]
-    fn test_edited() {
-        let mut settings = Settings::default();
-        let config = Config {
-            repo_path: "abc/abc".to_string(),
-            editor: "def/def".to_string(),
-        };
-
-        let new_config = Config {
-            repo_path: "abc/abc".to_string(),
-            editor: "def/def".to_string(),
-        };
-
-        settings.config = config.clone();
-        settings.new_config = new_config;
-
-        assert_eq!(settings.edited(), false);
-    }
-
-    #[test]
     fn test_not_edited() {
         let mut settings = Settings::default();
         let config = Config {
@@ -255,5 +238,48 @@ mod tests {
         settings.new_config = config;
 
         assert_eq!(settings.edited(), false);
+    }
+
+    #[test]
+    fn test_confirmation() {
+        let mut settings = Settings::default();
+        let config = Config {
+            repo_path: "abc/abc".to_string(),
+            editor: "def/def".to_string(),
+        };
+
+        let new_config = Config {
+            repo_path: "def/def".to_string(),
+            editor: "abc/abc".to_string(),
+        };
+
+        settings.config = config;
+        settings.new_config = new_config;
+        let _ = settings.handle_key_event(KeyCode::Esc.into());
+
+        assert_eq!(settings.confirmation, true);
+    }
+
+    #[test]
+    fn test_discard_enter() {
+        let mut settings = Settings::default();
+        settings.confirmation = true;
+
+        let _ = settings.handle_key_event(KeyCode::Left.into());
+        let action = settings.handle_key_event(KeyCode::Enter.into()).unwrap();
+
+        assert_eq!(settings.confirmation, false);
+        assert_eq!(action, Some(Action::UpdateConfig));
+    }
+
+    #[test]
+    fn test_ctrl_c() {
+        let mut settings = Settings::default();
+
+        let event = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+
+        let action = settings.handle_key_event(event).unwrap();
+
+        assert_eq!(action, Some(Action::Quit));
     }
 }
