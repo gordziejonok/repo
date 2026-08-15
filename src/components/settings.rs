@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::Line,
-    widgets::{Block, Paragraph, Row, Table, TableState},
+    widgets::{Block, Clear, Paragraph, Row, Table, TableState},
 };
 
 use crate::{Config, action::Action, components::Component};
@@ -14,6 +14,7 @@ pub struct Settings {
     config: Config,
     new_config: Config,
     table_state: TableState,
+    confirmation: bool,
     exit: bool,
 }
 
@@ -62,6 +63,15 @@ impl Component for Settings {
             .block(block);
 
         frame.render_stateful_widget(table, chunks[0], &mut self.table_state);
+
+        if self.confirmation {
+            let popup_block = Block::bordered().title("Popup");
+            let centered_area =
+                area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
+            frame.render_widget(Clear, centered_area);
+            let paragraph = Paragraph::new("Lorem ipsum").block(popup_block);
+            frame.render_widget(paragraph, centered_area);
+        }
 
         let text = vec![Line::from("[↑↓ to move, ctrl + c to quit]"), Line::from("")];
 
@@ -112,8 +122,14 @@ impl Component for Settings {
                     }
                 }
                 KeyCode::Esc => {
-                    confy::store("repo", None, self.new_config.clone()).unwrap();
-                    return Ok(Some(Action::UpdateConfig));
+                    if self.edited() && !self.confirmation {
+                        self.confirmation = true;
+                    } else if self.confirmation {
+                        self.confirmation = false;
+                    } else {
+                        return Ok(Some(Action::UpdateConfig));
+                    }
+                    // confy::store("repo", None, self.new_config.clone()).unwrap();
                 }
                 _ => {}
             };
@@ -130,6 +146,12 @@ impl Component for Settings {
         self.table_state = TableState::default();
         self.table_state.select_first();
         self.table_state.select_first_column();
+    }
+}
+
+impl Settings {
+    fn edited(&mut self) -> bool {
+        self.config != self.new_config
     }
 }
 
