@@ -277,6 +277,53 @@ mod tests {
     }
 
     #[test]
+    fn test_backspace() {
+        let mut settings = Settings::default();
+        settings.table_state = TableState::default();
+        settings.table_state.select_first();
+        let repo_path = "abc/abc".to_string();
+        let editor = "def/def".to_string();
+        let config = Config {
+            repo_path: repo_path.clone(),
+            editor: editor.clone(),
+        };
+
+        settings.set_config(config.clone());
+        let _ = settings.handle_key_event(KeyCode::Backspace.into());
+        let _ = settings.handle_key_event(KeyCode::Down.into());
+        let _ = settings.handle_key_event(KeyCode::Backspace.into());
+        let _ = settings.handle_key_event(KeyCode::Up.into());
+        let _ = settings.handle_key_event(KeyCode::Backspace.into());
+
+        assert_eq!(
+            settings.new_config.repo_path,
+            repo_path[..repo_path.len() - 2]
+        );
+        assert_eq!(settings.new_config.editor, editor[..editor.len() - 1]);
+    }
+
+    #[test]
+    fn test_edit() {
+        let mut settings = Settings::default();
+        settings.table_state = TableState::default();
+        settings.table_state.select_first();
+        let repo_path = "abc/abc".to_string();
+        let editor = "def/def".to_string();
+        let config = Config {
+            repo_path: repo_path.clone(),
+            editor: editor.clone(),
+        };
+
+        settings.set_config(config.clone());
+        let _ = settings.handle_key_event(KeyCode::Char('d').into());
+        let _ = settings.handle_key_event(KeyCode::Down.into());
+        let _ = settings.handle_key_event(KeyCode::Char('g').into());
+
+        assert_eq!(settings.new_config.repo_path, repo_path + "d");
+        assert_eq!(settings.new_config.editor, editor + "g");
+    }
+
+    #[test]
     fn test_discard_enter() {
         let mut settings = Settings::default();
         settings.confirmation = true;
@@ -297,5 +344,25 @@ mod tests {
         let action = settings.handle_key_event(event).unwrap();
 
         assert_eq!(action, Some(Action::Quit));
+    }
+
+    #[test]
+    fn test_right() {
+        let mut settings = Settings::default();
+        settings.confirmation = true;
+
+        let _ = settings.handle_key_event(KeyCode::Right.into());
+
+        assert_eq!(settings.discard, true);
+    }
+
+    #[test]
+    fn test_esc_confirmation() {
+        let mut settings = Settings::default();
+        settings.confirmation = true;
+
+        let _ = settings.handle_key_event(KeyCode::Esc.into());
+
+        assert_eq!(settings.confirmation, false);
     }
 }
