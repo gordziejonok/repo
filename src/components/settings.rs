@@ -58,9 +58,7 @@ impl Component for Settings {
             frame.render_widget(paragraph, centered_area);
         }
 
-        let text = vec![Line::from("[↑↓ to move, ctrl + c to quit]"), Line::from("")];
-
-        let paragraph = Paragraph::new(text).dark_gray();
+        let paragraph = self.help();
 
         frame.render_widget(paragraph, chunks[1]);
     }
@@ -164,6 +162,24 @@ impl Component for Settings {
 }
 
 impl Settings {
+    fn help(&mut self) -> Paragraph<'static> {
+        let text = if self.confirmation {
+            vec![
+                Line::from("[←→ to move, enter to select, esc to close, ctrl + c to quit]"),
+                Line::default(),
+            ]
+        } else {
+            vec![
+                Line::from(
+                    "[↑↓ to move, write to edit, backspace to delete, esc to close, ctrl + c to quit]",
+                ),
+                Line::default(),
+            ]
+        };
+
+        Paragraph::new(text).dark_gray()
+    }
+
     fn settings_table(&self) -> Table<'static> {
         let title = Line::from(" Settings ").bold();
 
