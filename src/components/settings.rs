@@ -42,14 +42,11 @@ impl Component for Settings {
                 vec![discard, Span::from("       "), save.underlined()]
             };
 
-            let lines = vec![
-                Line::from("You have unsaved changes. Do you want to discard or save them?"),
-                Line::default(),
-                Line::from(buttons),
-            ];
+            let message = "You have unsaved changes. Do you want to discard or save them?";
+            let lines = vec![Line::from(message), Line::default(), Line::from(buttons)];
 
             let centered_area = area.centered(
-                Constraint::Percentage(30),
+                Constraint::Length(message.len() as u16 + 4),
                 Constraint::Length(lines.len() as u16 + 2),
             );
             frame.render_widget(Clear, centered_area);
