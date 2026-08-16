@@ -292,8 +292,8 @@ mod tests {
 
         let event = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
 
-        let _ = repos.handle_key_event(event);
+        let action = repos.handle_key_event(event).unwrap();
 
-        assert_eq!(repos.exit, true);
+        assert_eq!(action, Some(Action::Quit));
     }
 }
