@@ -1,8 +1,10 @@
+use std::path::PathBuf;
+
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Clear, Paragraph, Row, Table, TableState},
 };
@@ -11,6 +13,7 @@ use crate::{Config, action::Action, components::Component};
 
 #[derive(Default)]
 pub struct Settings {
+    path: PathBuf,
     config: Config,
     new_config: Config,
     table_state: TableState,
@@ -26,44 +29,7 @@ impl Component for Settings {
             .constraints([Constraint::Min(1), Constraint::Length(2)])
             .split(area);
 
-        let title = Line::from(" Settings ").bold();
-        let block = Block::bordered().title(title);
-
-        let path = confy::get_configuration_file_path("repo", None)
-            .unwrap()
-            .display()
-            .to_string();
-
-        let repo_label = if self.config.repo_path != self.new_config.repo_path {
-            "Repos path *"
-        } else {
-            "Repos path"
-        };
-
-        let editor_label = if self.config.editor != self.new_config.editor {
-            "Editor *"
-        } else {
-            "Editor"
-        };
-
-        let rows = [
-            Row::new([repo_label, &self.new_config.repo_path]),
-            Row::new([editor_label, &self.new_config.editor]),
-        ];
-
-        let footer = Row::new(["Path", &path]);
-        let widths = [Constraint::Percentage(50), Constraint::Fill(1)];
-        let table = Table::new(rows, widths)
-            .footer(footer)
-            .column_spacing(1)
-            .style(Color::White)
-            .row_highlight_style(Style::new().on_black().bold())
-            .column_highlight_style(Color::Gray)
-            .cell_highlight_style(Style::new().reversed().yellow())
-            .highlight_symbol("> ")
-            .block(block);
-
-        frame.render_stateful_widget(table, chunks[0], &mut self.table_state);
+        frame.render_stateful_widget(self.settings_table(), chunks[0], &mut self.table_state);
 
         if self.confirmation {
             let popup_block = Block::bordered();
@@ -127,15 +93,11 @@ impl Component for Settings {
                 KeyCode::Right => {
                     if self.confirmation {
                         self.discard = !self.discard;
-                    } else {
-                        self.table_state.select_next_column();
                     }
                 }
                 KeyCode::Left => {
                     if self.confirmation {
                         self.discard = !self.discard;
-                    } else {
-                        self.table_state.select_previous_column();
                     }
                 }
                 KeyCode::Char(c) => {
@@ -194,14 +156,55 @@ impl Component for Settings {
     }
 
     fn init(&mut self) {
+        self.path = confy::get_configuration_file_path("repo", None).unwrap();
         self.table_state = TableState::default();
         self.table_state.select_first();
-        self.table_state.select_first_column();
+        self.table_state.select_column(Some(1));
     }
 }
 
 impl Settings {
-    fn edited(&mut self) -> bool {
+    fn settings_table(&self) -> Table<'static> {
+        let title = Line::from(" Settings ").bold();
+
+        let block = Block::bordered().title(title);
+
+        let repo_label = if self.config.repo_path != self.new_config.repo_path {
+            "Repos path *"
+        } else {
+            "Repos path"
+        };
+
+        let editor_label = if self.config.editor != self.new_config.editor {
+            "Editor *"
+        } else {
+            "Editor"
+        };
+
+        let rows = [
+            Row::new([repo_label.to_string(), self.new_config.repo_path.clone()]),
+            Row::new([editor_label.to_string(), self.new_config.editor.clone()]),
+        ];
+
+        let footer = Row::new(["Path".to_string(), self.path.display().to_string()]);
+        let widths = [Constraint::Percentage(50), Constraint::Fill(1)];
+
+        let table = Table::new(rows, widths)
+            .footer(footer)
+            .column_spacing(1)
+            .highlight_symbol("> ")
+            .block(block);
+
+        if self.confirmation {
+            return table.dark_gray();
+        }
+
+        table
+            .cell_highlight_style(Style::new().reversed().white())
+            .row_highlight_style(Style::new().on_black().bold())
+    }
+
+    fn edited(&self) -> bool {
         self.config != self.new_config
     }
 }
