@@ -1,8 +1,10 @@
+use std::path::PathBuf;
+
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Clear, Paragraph, Row, Table, TableState},
 };
@@ -11,6 +13,7 @@ use crate::{Config, action::Action, components::Component};
 
 #[derive(Default)]
 pub struct Settings {
+    path: PathBuf,
     config: Config,
     new_config: Config,
     table_state: TableState,
@@ -26,44 +29,7 @@ impl Component for Settings {
             .constraints([Constraint::Min(1), Constraint::Length(2)])
             .split(area);
 
-        let title = Line::from(" Settings ").bold();
-        let block = Block::bordered().title(title);
-
-        let path = confy::get_configuration_file_path("repo", None)
-            .unwrap()
-            .display()
-            .to_string();
-
-        let repo_label = if self.config.repo_path != self.new_config.repo_path {
-            "Repos path *"
-        } else {
-            "Repos path"
-        };
-
-        let editor_label = if self.config.editor != self.new_config.editor {
-            "Editor *"
-        } else {
-            "Editor"
-        };
-
-        let rows = [
-            Row::new([repo_label, &self.new_config.repo_path]),
-            Row::new([editor_label, &self.new_config.editor]),
-        ];
-
-        let footer = Row::new(["Path", &path]);
-        let widths = [Constraint::Percentage(50), Constraint::Fill(1)];
-        let table = Table::new(rows, widths)
-            .footer(footer)
-            .column_spacing(1)
-            .style(Color::White)
-            .row_highlight_style(Style::new().on_black().bold())
-            .column_highlight_style(Color::Gray)
-            .cell_highlight_style(Style::new().reversed().yellow())
-            .highlight_symbol("> ")
-            .block(block);
-
-        frame.render_stateful_widget(table, chunks[0], &mut self.table_state);
+        frame.render_stateful_widget(self.settings_table(), chunks[0], &mut self.table_state);
 
         if self.confirmation {
             let popup_block = Block::bordered();
@@ -76,14 +42,11 @@ impl Component for Settings {
                 vec![discard, Span::from("       "), save.underlined()]
             };
 
-            let lines = vec![
-                Line::from("You have unsaved changes. Do you want to discard or save them?"),
-                Line::default(),
-                Line::from(buttons),
-            ];
+            let message = "You have unsaved changes. Do you want to discard or save them?";
+            let lines = vec![Line::from(message), Line::default(), Line::from(buttons)];
 
             let centered_area = area.centered(
-                Constraint::Percentage(30),
+                Constraint::Length(message.len() as u16 + 4),
                 Constraint::Length(lines.len() as u16 + 2),
             );
             frame.render_widget(Clear, centered_area);
@@ -92,9 +55,7 @@ impl Component for Settings {
             frame.render_widget(paragraph, centered_area);
         }
 
-        let text = vec![Line::from("[↑↓ to move, ctrl + c to quit]"), Line::from("")];
-
-        let paragraph = Paragraph::new(text).dark_gray();
+        let paragraph = self.help();
 
         frame.render_widget(paragraph, chunks[1]);
     }
@@ -127,15 +88,11 @@ impl Component for Settings {
                 KeyCode::Right => {
                     if self.confirmation {
                         self.discard = !self.discard;
-                    } else {
-                        self.table_state.select_next_column();
                     }
                 }
                 KeyCode::Left => {
                     if self.confirmation {
                         self.discard = !self.discard;
-                    } else {
-                        self.table_state.select_previous_column();
                     }
                 }
                 KeyCode::Char(c) => {
@@ -194,14 +151,73 @@ impl Component for Settings {
     }
 
     fn init(&mut self) {
+        self.path = confy::get_configuration_file_path("repo", None).unwrap();
         self.table_state = TableState::default();
         self.table_state.select_first();
-        self.table_state.select_first_column();
+        self.table_state.select_column(Some(1));
     }
 }
 
 impl Settings {
-    fn edited(&mut self) -> bool {
+    fn help(&mut self) -> Paragraph<'static> {
+        let text = if self.confirmation {
+            vec![
+                Line::from("[←→ to move, enter to select, esc to close, ctrl + c to quit]"),
+                Line::default(),
+            ]
+        } else {
+            vec![
+                Line::from(
+                    "[↑↓ to move, write to edit, backspace to delete, esc to close, ctrl + c to quit]",
+                ),
+                Line::default(),
+            ]
+        };
+
+        Paragraph::new(text).dark_gray()
+    }
+
+    fn settings_table(&self) -> Table<'static> {
+        let title = Line::from(" Settings ").bold();
+
+        let block = Block::bordered().title(title);
+
+        let repo_label = if self.config.repo_path != self.new_config.repo_path {
+            "Repos path *"
+        } else {
+            "Repos path"
+        };
+
+        let editor_label = if self.config.editor != self.new_config.editor {
+            "Editor *"
+        } else {
+            "Editor"
+        };
+
+        let rows = [
+            Row::new([repo_label.to_string(), self.new_config.repo_path.clone()]),
+            Row::new([editor_label.to_string(), self.new_config.editor.clone()]),
+        ];
+
+        let footer = Row::new(["Path".to_string(), self.path.display().to_string()]);
+        let widths = [Constraint::Percentage(50), Constraint::Fill(1)];
+
+        let table = Table::new(rows, widths)
+            .footer(footer)
+            .column_spacing(1)
+            .highlight_symbol("> ")
+            .block(block);
+
+        if self.confirmation {
+            return table.dark_gray();
+        }
+
+        table
+            .cell_highlight_style(Style::new().reversed().white())
+            .row_highlight_style(Style::new().on_black().bold())
+    }
+
+    fn edited(&self) -> bool {
         self.config != self.new_config
     }
 }
@@ -261,6 +277,53 @@ mod tests {
     }
 
     #[test]
+    fn test_backspace() {
+        let mut settings = Settings::default();
+        settings.table_state = TableState::default();
+        settings.table_state.select_first();
+        let repo_path = "abc/abc".to_string();
+        let editor = "def/def".to_string();
+        let config = Config {
+            repo_path: repo_path.clone(),
+            editor: editor.clone(),
+        };
+
+        settings.set_config(config.clone());
+        let _ = settings.handle_key_event(KeyCode::Backspace.into());
+        let _ = settings.handle_key_event(KeyCode::Down.into());
+        let _ = settings.handle_key_event(KeyCode::Backspace.into());
+        let _ = settings.handle_key_event(KeyCode::Up.into());
+        let _ = settings.handle_key_event(KeyCode::Backspace.into());
+
+        assert_eq!(
+            settings.new_config.repo_path,
+            repo_path[..repo_path.len() - 2]
+        );
+        assert_eq!(settings.new_config.editor, editor[..editor.len() - 1]);
+    }
+
+    #[test]
+    fn test_edit() {
+        let mut settings = Settings::default();
+        settings.table_state = TableState::default();
+        settings.table_state.select_first();
+        let repo_path = "abc/abc".to_string();
+        let editor = "def/def".to_string();
+        let config = Config {
+            repo_path: repo_path.clone(),
+            editor: editor.clone(),
+        };
+
+        settings.set_config(config.clone());
+        let _ = settings.handle_key_event(KeyCode::Char('d').into());
+        let _ = settings.handle_key_event(KeyCode::Down.into());
+        let _ = settings.handle_key_event(KeyCode::Char('g').into());
+
+        assert_eq!(settings.new_config.repo_path, repo_path + "d");
+        assert_eq!(settings.new_config.editor, editor + "g");
+    }
+
+    #[test]
     fn test_discard_enter() {
         let mut settings = Settings::default();
         settings.confirmation = true;
@@ -281,5 +344,25 @@ mod tests {
         let action = settings.handle_key_event(event).unwrap();
 
         assert_eq!(action, Some(Action::Quit));
+    }
+
+    #[test]
+    fn test_right() {
+        let mut settings = Settings::default();
+        settings.confirmation = true;
+
+        let _ = settings.handle_key_event(KeyCode::Right.into());
+
+        assert_eq!(settings.discard, true);
+    }
+
+    #[test]
+    fn test_esc_confirmation() {
+        let mut settings = Settings::default();
+        settings.confirmation = true;
+
+        let _ = settings.handle_key_event(KeyCode::Esc.into());
+
+        assert_eq!(settings.confirmation, false);
     }
 }
