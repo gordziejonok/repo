@@ -77,10 +77,7 @@ impl Component for Repos {
             frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
         }
 
-        let text = vec![
-            Line::from("[↑↓ to move, type to filter, enter to interact, ctrl + c to quit]"),
-            Line::from(""),
-        ];
+        let text = Line::from("[↑↓ to move, type to filter, enter to interact, ctrl + c to quit]");
 
         let paragraph = Paragraph::new(text).dark_gray();
 

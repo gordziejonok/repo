@@ -161,17 +161,11 @@ impl Component for Settings {
 impl Settings {
     fn help(&mut self) -> Paragraph<'static> {
         let text = if self.confirmation {
-            vec![
-                Line::from("[←→ to move, enter to select, esc to close, ctrl + c to quit]"),
-                Line::default(),
-            ]
+            Line::from("[←→ to move, enter to select, esc to close, ctrl + c to quit]")
         } else {
-            vec![
-                Line::from(
-                    "[↑↓ to move, write to edit, backspace to delete, esc to close, ctrl + c to quit]",
-                ),
-                Line::default(),
-            ]
+            Line::from(
+                "[↑↓ to move, write to edit, backspace to delete, esc to close, ctrl + c to quit]",
+            )
         };
 
         Paragraph::new(text).dark_gray()
