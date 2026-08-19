@@ -115,11 +115,9 @@ impl Component for Settings {
                             .list_state
                             .selected()
                             .expect("Index should always be selected");
-                        if index == 0 {
-                            self.new_config.repo_path.push(c);
-                        } else if index == 1 {
-                            self.new_config.editor.push(c);
-                        }
+                        self.modify_field(index, |s| {
+                            s.push(c);
+                        });
                     }
                 }
                 KeyCode::Backspace => {
@@ -128,11 +126,9 @@ impl Component for Settings {
                             .list_state
                             .selected()
                             .expect("Index should always be selected");
-                        if index == 0 {
-                            self.new_config.repo_path.pop();
-                        } else if index == 1 {
-                            self.new_config.editor.pop();
-                        }
+                        self.modify_field(index, |s| {
+                            s.pop();
+                        });
                     }
                 }
                 KeyCode::Esc => {
@@ -171,6 +167,19 @@ impl Component for Settings {
 }
 
 impl Settings {
+    fn modify_field<F>(&mut self, index: usize, operation: F)
+    where
+        F: FnOnce(&mut String),
+    {
+        let field = match index {
+            0 => &mut self.new_config.repo_path,
+            1 => &mut self.new_config.editor,
+            _ => return,
+        };
+
+        operation(field);
+    }
+
     fn help(&mut self) -> Paragraph<'static> {
         let text = if self.confirmation {
             Line::from("[←→ to move, enter to select, esc to close, ctrl + c to quit]")
