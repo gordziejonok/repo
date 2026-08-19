@@ -66,10 +66,7 @@ impl Component for Repos {
                 .constraints([Constraint::Min(1), Constraint::Length(3)])
                 .split(chunks[0]);
 
-            let title = Line::from(" Search ").bold();
-            let text = Line::from(format!(" {} ", self.search));
-            let block = Block::bordered().title(title);
-            let paragraph = Paragraph::new(text).block(block);
+            let paragraph = self.get_search();
 
             frame.render_stateful_widget(&list, body[0], &mut self.list_state);
             frame.render_widget(paragraph, body[1]);
@@ -183,6 +180,14 @@ impl Repos {
             .filter(|(_, r)| r.slug.to_lowercase().contains(&filter))
             .map(|(i, _)| i)
             .collect()
+    }
+
+    fn get_search(&self) -> Paragraph<'static> {
+        let title = Line::from(" Search ").bold();
+        let text = Line::from(format!(" {} ", self.search));
+        let block = Block::bordered().title(title);
+        let paragraph = Paragraph::new(text).block(block);
+        paragraph
     }
 }
 
