@@ -4,9 +4,9 @@ use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Style, Stylize},
+    style::{Color, Modifier, Stylize},
     text::{Line, Span},
-    widgets::{Block, Clear, Paragraph, Row, Table, TableState},
+    widgets::{Block, Clear, List, ListItem, ListState, Paragraph},
 };
 
 use crate::{Config, action::Action, components::Component};
@@ -16,7 +16,7 @@ pub struct Settings {
     path: PathBuf,
     config: Config,
     new_config: Config,
-    table_state: TableState,
+    list_state: ListState,
     confirmation: bool,
     discard: bool,
     exit: bool,
@@ -29,7 +29,21 @@ impl Component for Settings {
             .constraints([Constraint::Min(1), Constraint::Length(2)])
             .split(area);
 
-        frame.render_stateful_widget(self.settings_table(), chunks[0], &mut self.table_state);
+        frame.render_stateful_widget(self.settings_list(), chunks[0], &mut self.list_state);
+
+        let footer = Paragraph::new(vec![
+            Line::from("Path".to_string()),
+            Line::from(self.path.display().to_string()),
+        ]);
+
+        let footer_area = Rect {
+            x: area.x + 2,
+            y: chunks[0].bottom().saturating_sub(3),
+            width: area.width,
+            height: 2,
+        };
+
+        frame.render_widget(footer, footer_area);
 
         if self.confirmation {
             let popup_block = Block::bordered();
@@ -77,12 +91,12 @@ impl Component for Settings {
             match key_event.code {
                 KeyCode::Down => {
                     if !self.confirmation {
-                        self.table_state.select_next()
+                        self.list_state.select_next();
                     }
                 }
                 KeyCode::Up => {
                     if !self.confirmation {
-                        self.table_state.select_previous()
+                        self.list_state.select_previous();
                     }
                 }
                 KeyCode::Right => {
@@ -98,9 +112,9 @@ impl Component for Settings {
                 KeyCode::Char(c) => {
                     if !self.confirmation {
                         let index = self
-                            .table_state
+                            .list_state
                             .selected()
-                            .expect("A row should always be selected");
+                            .expect("Index should always be selected");
                         if index == 0 {
                             self.new_config.repo_path.push(c);
                         } else if index == 1 {
@@ -111,9 +125,9 @@ impl Component for Settings {
                 KeyCode::Backspace => {
                     if !self.confirmation {
                         let index = self
-                            .table_state
+                            .list_state
                             .selected()
-                            .expect("A row should always be selected");
+                            .expect("Index should always be selected");
                         if index == 0 {
                             self.new_config.repo_path.pop();
                         } else if index == 1 {
@@ -152,9 +166,7 @@ impl Component for Settings {
 
     fn init(&mut self) {
         self.path = confy::get_configuration_file_path("repo", None).unwrap();
-        self.table_state = TableState::default();
-        self.table_state.select_first();
-        self.table_state.select_column(Some(1));
+        self.list_state = ListState::default().with_selected(Some(0));
     }
 }
 
@@ -171,9 +183,8 @@ impl Settings {
         Paragraph::new(text).dark_gray()
     }
 
-    fn settings_table(&self) -> Table<'static> {
+    fn settings_list(&self) -> List<'static> {
         let title = Line::from(" Settings ").bold();
-
         let block = Block::bordered().title(title);
 
         let repo_label = if self.config.repo_path != self.new_config.repo_path {
@@ -188,27 +199,23 @@ impl Settings {
             "Editor"
         };
 
-        let rows = [
-            Row::new([repo_label.to_string(), self.new_config.repo_path.clone()]),
-            Row::new([editor_label.to_string(), self.new_config.editor.clone()]),
+        let items = vec![
+            ListItem::new(vec![
+                Line::from(repo_label.to_string()).bold(),
+                Line::from(self.new_config.repo_path.clone()),
+            ]),
+            ListItem::new(vec![
+                Line::from(editor_label.to_string()).bold(),
+                Line::from(self.new_config.editor.clone()),
+            ]),
         ];
 
-        let footer = Row::new(["Path".to_string(), self.path.display().to_string()]);
-        let widths = [Constraint::Percentage(50), Constraint::Fill(1)];
-
-        let table = Table::new(rows, widths)
-            .footer(footer)
-            .column_spacing(1)
+        let list = List::new(items)
+            .style(Color::White)
+            .highlight_style(Modifier::REVERSED)
             .highlight_symbol("> ")
             .block(block);
-
-        if self.confirmation {
-            return table.dark_gray();
-        }
-
-        table
-            .cell_highlight_style(Style::new().reversed().white())
-            .row_highlight_style(Style::new().on_black().bold())
+        list
     }
 
     fn edited(&self) -> bool {
@@ -273,8 +280,8 @@ mod tests {
     #[test]
     fn test_backspace() {
         let mut settings = Settings::default();
-        settings.table_state = TableState::default();
-        settings.table_state.select_first();
+        settings.list_state = ListState::default();
+        settings.list_state.select_first();
         let repo_path = "abc/abc".to_string();
         let editor = "def/def".to_string();
         let config = Config {
@@ -299,8 +306,8 @@ mod tests {
     #[test]
     fn test_edit() {
         let mut settings = Settings::default();
-        settings.table_state = TableState::default();
-        settings.table_state.select_first();
+        settings.list_state = ListState::default();
+        settings.list_state.select_first();
         let repo_path = "abc/abc".to_string();
         let editor = "def/def".to_string();
         let config = Config {

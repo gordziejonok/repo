@@ -33,7 +33,7 @@ impl App {
 
         self.update_config();
 
-        self.active_component = 0;
+        self.active_component = 1;
 
         if self.config.editor.is_empty() && self.config.repo_path.is_empty() {
             self.active_component = 1;
