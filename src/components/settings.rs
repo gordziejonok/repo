@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use arboard::Clipboard;
 use ratatui::{
     Frame,
     crossterm::event::{KeyCode, KeyModifiers},
@@ -86,6 +87,15 @@ impl Component for Settings {
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
             if let KeyCode::Char('c') = key_event.code {
                 self.exit = true
+            }
+            if let KeyCode::Char('v') = key_event.code {
+                let index = self
+                    .list_state
+                    .selected()
+                    .expect("Index should always be selected");
+                let mut clipboard = Clipboard::new()?;
+                let text = clipboard.get_text()?;
+                self.modify_field(index, |s| s.push_str(&text));
             }
         } else {
             match key_event.code {
